@@ -30,18 +30,123 @@ inputs:
     description: 'Path to the dmn rules to add to the linter'
     required: false
     # default: '##'
+  username:
+    description: 'Username for the Docker registry'
+    required: false
+    default: '${{ github.actor }}'
+  password:
+    description: 'Password or Personal Access Token (PAT) for the Docker registry'
+    required: false
+    default: '${{ secrets.GITHUB_TOKEN }}'
 
 # Define how the Action runs
 runs:
-  using: 'docker'
-  image: 'docker://ghcr.io/bp3/camunda-lint:main'
-  # Use the local entrypoint so we can structure the parameters we get as inputs
-  entrypoint: './action-entrypoint.sh'
-  # Optional: Pass the inputs as an array of arguments to the Docker container
-  # args:
-  #   - ${{ inputs.command }}
-  #   - ${{ inputs.report-format }}
-  #   - ${{ inputs.bpmn-report-filename }}
-  #   - ${{ inputs.dmn-report-filename }}
-  #   - ${{ inputs.bpmn-rules-path }}
-  #   - ${{ inputs.dmn-rules-path }}
+  using: 'composite'
+
+  steps:
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v4
+      with:
+        registry: ghcr.io
+        username: ${{ inputs.username }}
+        password: ${{ inputs.password }}
+
+    - name: Pull the image
+      shell: bash
+      run: |
+        docker pull ghcr.io/bp3/camunda-lint:main
+
+    - name: Run the Linter
+      shell: bash
+      run: |
+        export INPUT_COMMAND="${{ inputs.command }}"
+        export INPUT_REPORT_FORMAT="${{ inputs.report-format }}"
+        export INPUT_BPMN_REPORT_FILEPATH="${{ inputs.bpmn-report-filename }}"
+        export INPUT_DMN_REPORT_FILEPATH="${{ inputs.dmn-report-filename }}"
+        export INPUT_BPMN_RULES_PATH="${{ inputs.bpmn-rules-path }}"
+        export INPUT_DMN_RULES_PATH="${{ inputs.dmn-rules-path }}"
+
+        docker run --rm \
+          -e "INPUT_COMMAND" 
+          -e "INPUT_REPORT-FORMAT" 
+          -e "INPUT_BPMN-REPORT-FILENAME" 
+          -e "INPUT_DMN-REPORT-FILENAME" 
+          -e "INPUT_BPMN-RULES-PATH" 
+          -e "INPUT_DMN-RULES-PATH" 
+          -e "HOME" 
+          -e "GITHUB_JOB" 
+          -e "GITHUB_REF" 
+          -e "GITHUB_SHA" 
+          -e "GITHUB_REPOSITORY" 
+          -e "GITHUB_REPOSITORY_OWNER" 
+          -e "GITHUB_REPOSITORY_OWNER_ID" 
+          -e "GITHUB_RUN_ID" 
+          -e "GITHUB_RUN_NUMBER" 
+          -e "GITHUB_RETENTION_DAYS" 
+          -e "GITHUB_RUN_ATTEMPT" 
+          -e "GITHUB_ACTOR_ID" 
+          -e "GITHUB_ACTOR" 
+          -e "GITHUB_WORKFLOW" 
+          -e "GITHUB_HEAD_REF" 
+          -e "GITHUB_BASE_REF" 
+          -e "GITHUB_EVENT_NAME" 
+          -e "GITHUB_SERVER_URL" 
+          -e "GITHUB_API_URL" 
+          -e "GITHUB_GRAPHQL_URL" 
+          -e "GITHUB_REF_NAME" 
+          -e "GITHUB_REF_PROTECTED" 
+          -e "GITHUB_REF_TYPE" 
+          -e "GITHUB_WORKFLOW_REF" 
+          -e "GITHUB_WORKFLOW_SHA" 
+          -e "GITHUB_REPOSITORY_ID" 
+          -e "GITHUB_TRIGGERING_ACTOR" 
+          -e "GITHUB_WORKSPACE" 
+          -e "GITHUB_ACTION" 
+          -e "GITHUB_EVENT_PATH" 
+          -e "GITHUB_ACTION_REPOSITORY" 
+          -e "GITHUB_ACTION_REF" 
+          -e "GITHUB_PATH" 
+          -e "GITHUB_ENV" 
+          -e "GITHUB_STEP_SUMMARY" 
+          -e "GITHUB_STATE" 
+          -e "GITHUB_OUTPUT" 
+          -e "RUNNER_OS" 
+          -e "RUNNER_ARCH" 
+          -e "RUNNER_NAME" 
+          -e "RUNNER_ENVIRONMENT" 
+          -e "RUNNER_TOOL_CACHE" 
+          -e "RUNNER_TEMP" 
+          -e "RUNNER_WORKSPACE" 
+          -e "ACTIONS_RUNTIME_URL" 
+          -e "ACTIONS_RUNTIME_TOKEN" 
+          -e "ACTIONS_CACHE_URL" 
+          -e "ACTIONS_RESULTS_URL" 
+          -e "ACTIONS_ORCHESTRATION_ID" 
+          -e GITHUB_ACTIONS=true 
+          -e CI=true
+          -v "/var/run/docker.sock":"/var/run/docker.sock" 
+          -v "/home/runner/work/_temp":"/github/runner_temp" 
+          -v "/home/runner/work/_temp/_github_home":"/github/home" 
+          -v "/home/runner/work/_temp/_github_workflow":"/github/workflow" 
+          -v "/home/runner/work/_temp/_runner_file_commands":"/github/file_commands" 
+          -v "$GITHUB_WORKSPACE":"$GITHUB_WORKSPACE" \
+          -w "$GITHUB_WORKSPACE" \
+          -v "$GITHUB_ACTION_PATH":"$GITHUB_ACTION_PATH" \
+          --entrypoint "$GITHUB_ACTION_PATH/action-entrypoint.sh" \
+          ghcr.io/bp3/camunda-lint:main
+
+  # -e GITHUB_WORKSPACE \
+  # -e GITHUB_OUTPUT \
+
+
+  # image: 'docker://ghcr.io/bp3/camunda-lint:main'
+  # # Use the local entrypoint so we can structure the parameters we get as inputs
+  # entrypoint: './action-entrypoint.sh'
+  # # Optional: Pass the inputs as an array of arguments to the Docker container
+  # # args:
+  # #   - ${{ inputs.command }}
+  # #   - ${{ inputs.report-format }}
+  # #   - ${{ inputs.bpmn-report-filename }}
+  # #   - ${{ inputs.dmn-report-filename }}
+  # #   - ${{ inputs.bpmn-rules-path }}
+  # #   - ${{ inputs.dmn-rules-path }}
